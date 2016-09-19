@@ -76,6 +76,7 @@ function better_formats_filter_process_format(array &$element, FormStateInterfac
   // the permissions of the current user).
   $hide_selection = FALSE;
 
+  $is_admin = better_formats_is_admin_user(\Drupal\user\Entity\User::load(\Drupal::currentUser()->id()));
   if ($entity_type != NULL) {
     $hide_selection = \Drupal::currentUser()->hasPermission('hide format selection for ' . $entity_type);
   }
@@ -83,15 +84,15 @@ function better_formats_filter_process_format(array &$element, FormStateInterfac
   $hide_tips = \Drupal::currentUser()->hasPermission('hide format tips');
   $hide_tips_link = \Drupal::currentUser()->hasPermission('hide more format tips link');
 
-  if ($hide_selection) {
+  if ($hide_selection && !$is_admin) {
     $element['format']['format']['#access'] = FALSE;
   }
 
-  if ($hide_tips) {
+  if ($hide_tips && !$is_admin) {
     $element['format']['guidelines']['#access'] = FALSE;
   }
 
-  if ($hide_tips_link) {
+  if ($hide_tips_link && !$is_admin) {
     $element['format']['help']['#access'] = FALSE;
   }
 
@@ -195,6 +196,26 @@ function better_formats_filter_process_format(array &$element, FormStateInterfac
   }
 
   return $element;
+}
+
+/**
+ * Determine if an user account is admin (has an admin role).
+ *
+ * @param \Drupal\user\Entity\User $account
+ *  The user account to check.
+ */
+function better_formats_is_admin_user(\Drupal\user\Entity\User $account) {
+  $roles = $account->get('roles')->referencedEntities();
+  $is_admin = FALSE;
+  // An user is an admin user if he has at least one of the roles which is
+  // marked as being an admin role.
+  foreach ($roles as $role) {
+    if ($role->isAdmin()) {
+      $is_admin = TRUE;
+      break;
+    }
+  }
+  return $is_admin;
 }
 
 /**
