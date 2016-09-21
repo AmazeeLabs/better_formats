@@ -10,6 +10,25 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
 
 /**
+ * Implements hook_field_widget_form_alter().
+ *
+ * @param $element
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ * @param $context
+ */
+function better_formats_field_widget_form_alter(&$element, FormStateInterface $form_state, $context) {
+  $field_definition = $context['items']->getFieldDefinition();
+  if (better_formats_is_text_format($field_definition->getType())) {
+    // Since $form object cannot be trusted to retrieve $entity and $field_name
+    // in better_formats_filter_process_format when using embed entities
+    // (with paragraphs, or inline_entity_form), let's handle it in field_widget_alter,
+    // where we can work with $context.
+    $element['#entity'] = $context['items']->getEntity();
+    $element['#field_name'] = $context['items']->getName();
+  }
+}
+
+/**
  * Implements hook_element_info_alter().
  */
 function better_formats_element_info_alter(array &$types) {
@@ -48,9 +67,9 @@ function better_formats_filter_process_format(array &$element, FormStateInterfac
   $form_object = $form_state->getFormObject();
 
   if ($form_object instanceof Drupal\Core\Entity\ContentEntityForm) {
-    $entity = $form_state->getFormObject()->getEntity();
+    $entity = $element['#entity'];
     $entity_type = $entity->getEntityTypeId();
-    $field_name = reset($element['#parents']);
+    $field_name = $element['#field_name'];
     $field_definition = $entity->getFieldDefinition($field_name);
 
     if ($field_definition instanceof ThirdPartySettingsInterface) {
